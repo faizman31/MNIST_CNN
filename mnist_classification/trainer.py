@@ -84,5 +84,66 @@ class MyEngine(Engine):
                 'accuracy' : float(accuracy)
             }
             
+    
+    @staticmethod
+    def attach(train_engine,valid_engine,verbose=VERBOSE_EPOCH_WISE):
+        def attach_running_average(engine,metric_name):
+            RunningAverage(output_transform=lambda x: x[metric_name]).attach(
+                engine,
+                metric_name
+            )
 
+        training_metric_names=['loss','accuracy','|param|','|g_param|']
 
+        for metric_name in training_metric_names:
+            attach_running_average(train_engine,metric_name)
+
+        if verbose >= VERBOSE_BATCH_WISE:
+            pbar = ProgressBar(bar_format=None,ncols=120)
+            pbar.attach(train_engine,training_metric_names)
+
+        if verbose >= VERBOSE_EPOCH_WISE:
+            @train_engine.on(Events.EPOCH_COMPLETED)
+            def print_train_logs(engine):
+                print('Epoch {} - |param|={:.4e} |g_param|={:.4e} loss={:.4e} accuracy={:.4f}'.format(
+                    engine.state.epoch,
+                    engine.state.metrics['|param|'],
+                    engine.state.metrics['|g_param'],
+                    engine.state.metrics['accuracy'],
+                    engine.state.metrics['loss']
+                ))
+
+        validation_metric_names=['loss','accuracy']
+
+        for metric_name in validation_metric_names:
+            attach_running_average(valid_engine,metric_name)
+
+        if verbose >= VERBOSE_BATCH_WISE:
+            pbar = ProgressBar(bar_format=None,ncols=120)
+            pbar.attach(valid_engine,validation_metric_names)
+
+        if verbose >= VERBOSE_EPOCH_WISE:
+            @valid_engine.on(Events.EPOCH_COMPLETED)
+            def print_valid_logs(engine):
+                print('Validation - loss={:.4e} accuracy={:.4f} best_loss={:.4e}'.format(
+                    engine.state.metrics['loss'],
+                    engine.state.metrics['accuracy'],
+                    engine.best_loss
+                ))
+
+    @staticmethod
+    def check_best(engine):
+        loss = float(engine.state.metrics['loss'])
+        if loss <= engine.best_loss:
+            engine.best_loss = loss
+            engine.best_model = deepcopy(engine.model.state_dict())
+    
+    @staticmethod
+    def save_model(engine,train_engine,config,**kwargs):
+        torch.save({
+            'model' : engine.best_model,
+            'config' : config,
+            **kwargs
+        },config.model_fn)
+
+            
