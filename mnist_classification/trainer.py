@@ -146,4 +146,46 @@ class MyEngine(Engine):
             **kwargs
         },config.model_fn)
 
-            
+
+class Trainer():
+    def __init__(self,config):
+        self.config=config
+
+    def train(self,model,crit,optimizer,train_loader,valid_loader):
+
+        train_engine = MyEngine(
+            MyEngine.train,
+            model,crit,optimizer,self.config
+        )
+        valid_engine = MyEngine(
+            MyEngine.validate,
+            model,crit,optimizer,self.config
+        )
+
+        MyEngine.attach(train_engine,valid_engine,verbose=self.config.verbose)      
+
+        def run_validation(engine,valid_engine,valid_loader):
+            valid_engine.run(valid_loader,max_epoch=1)
+
+        train_engine.add_event_handler(
+            Events.EPOCH_COMPLETED,
+            run_validation,
+            valid_engine,valid_loader
+        )
+        valid_engine.add_event_handler(
+            Events.EPOCH_COMPLETED,
+            MyEngine.check_best,
+        )  
+        valid_engine.add_event_handler(
+            Events.EPOCH_COMPLETED,
+            MyEngine.save_model,
+            train_engine,self.config
+        )
+
+        train_engine.run(
+            train_loader,
+            max_epoch=self.config.n_epochs)
+
+        model.load_state_dict(valid_engine.best_model)
+
+        return model
