@@ -6,6 +6,8 @@ class FullyConnectedClassifier(nn.Module):
     def __init__(self,input_size,output_size):
         self.input_size = input_size
         self.output_size = output_size
+        
+        super().__init__()
 
         self.layers = nn.Sequential(
             nn.Linear(input_size, 500),

@@ -108,7 +108,7 @@ class MyEngine(Engine):
                 print('Epoch {} - |param|={:.4e} |g_param|={:.4e} loss={:.4e} accuracy={:.4f}'.format(
                     engine.state.epoch,
                     engine.state.metrics['|param|'],
-                    engine.state.metrics['|g_param'],
+                    engine.state.metrics['|g_param|'],
                     engine.state.metrics['accuracy'],
                     engine.state.metrics['loss']
                 ))
@@ -165,7 +165,7 @@ class Trainer():
         MyEngine.attach(train_engine,valid_engine,verbose=self.config.verbose)      
 
         def run_validation(engine,valid_engine,valid_loader):
-            valid_engine.run(valid_loader,max_epoch=1)
+            valid_engine.run(valid_loader,max_epochs=1)
 
         train_engine.add_event_handler(
             Events.EPOCH_COMPLETED,
@@ -184,7 +184,7 @@ class Trainer():
 
         train_engine.run(
             train_loader,
-            max_epoch=self.config.n_epochs)
+            max_epochs=self.config.n_epochs)
 
         model.load_state_dict(valid_engine.best_model)
 
