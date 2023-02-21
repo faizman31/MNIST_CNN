@@ -17,8 +17,8 @@ data_loader.py는 MNIST 데이터를 다운로드 받는 메서드와 해당 데
 ```
 import torch
 from torch.utils.data import Dataset,DataLoader
+```  
 
-```
 - MNISTDataset
 ```
 class MNISTDataset(Dataset): # pytorch.utils.data의 Dataset 상속
@@ -40,6 +40,67 @@ class MNISTDataset(Dataset): # pytorch.utils.data의 Dataset 상속
             x = x.reshape(-1) # (28,28) ->(784)
         
         return x,y
+```  
+
+- load_mnist : MNIST 데이터를 다운로드 받는 메서드
+```
+def load_mnist(is_train=True, flatten=True):
+    from torchvision import datasets, transforms
+
+    dataset = datasets.MNIST(
+        '../data', train=is_train, download=True,
+        transform=transforms.Compose([
+            transforms.ToTensor(),
+        ]),
+    )
+
+    x = dataset.data.float() / 255.
+    y = dataset.targets
+
+    if flatten:
+        x = x.view(x.size(0), -1)
+
+    return x, y
+```  
+
+- get_loaders : 데이터를 Pytorch의 DataLoader의 싣는 메서드
+```
+def get_loaders(config):
+    x,y = load_mnist(is_train=True,flatten=False)
+
+    # Define train/valid Count - train_cnt,valid_cnt
+    train_cnt = int( x.shape[0] * config.train_ratio )
+    valid_cnt = x.shape[0] - train_cnt
+
+    flatten = True if config.model == 'fc' else False
+
+    indices = torch.randperm(x.shape[0]) # Data Index shuffle
+
+    # Data Shuffle -> Train/Valid Split
+    train_x,valid_x = torch.index_select(x,dim=0,index=indices).split([train_cnt,valid_cnt])
+    train_y,valid_y = torch.index_select(y,dim=0,index=indices).split([train_cnt,valid_cnt])
+
+    # Train/Valid Data Loading DataLoader
+    train_loader = DataLoader(
+        dataset = MNISTDataset(train_x,train_y,flatten),
+        batch_size = config.batch_size,
+        shuffle=True,
+    )
+    valid_loader = DataLoader(
+        dataset = MNISTDataset(valid_x,valid_y,flatten),
+        batch_size = config.baatch_size,
+        shuffle=True,
+    )
+
+    # Test data Loading DataLoader
+    test_x,test_y = load_mnist(is_train=False,flatten=False)
+    test_loader = DataLoader(
+        dataset = MNISTDataset(test_x,test_y),
+        batch_size = config.batch_size,
+        shuffle=False,
+    )
+
+    return train_loader,valid_loader,test_loader
 ```
 
 
