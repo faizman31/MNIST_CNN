@@ -142,7 +142,65 @@ def get_parameter_norm(parameters,norm_type=2):
 
     return total_norm
 ```
+---
+## 3. trainer.py
+Pytorch Ignite를 활용한 Trainer를 구현해놓은 파일입니다. Trainer.py 에서는 model,loss_function,optimizer,config 를 전달받아 train_loop와 validation_loop 를 실행하고
+check_best 메서드를 통해 최적의 모델을 갱신하고 save_model 메서드를 통해 모델을 저장합니다.
+- Library Import
+```
+from copy import deepcopy
 
+import torch 
+import torch.nn as nn 
+import torch.nn.utils as torch_utils
+import torch.optim as optim
 
+from ignite.engine import Engine
+from ignite.engine import Events
+from ignite.metrics import RunningAverage
+from ignite.contrib.handlers.tqdm_logger import ProgressBar
+
+from mnist_classification.utils import get_grad_norm,get_parameter_norm
+```
+
+- MyEngine 
+```
+class MyEngine(Engine):
+    def __init__(
+        self,
+        func,
+        model,
+        crit, # == Loss Function
+        optimizer,
+        config,
+    ):
+        self.model=model
+        self.crit=crit
+        self.optimizer=optimizer
+        self.config=config
+
+        super().__init__(func)
+
+        self.best_loss = np.inf
+        self.best_model = None
+
+        self.device = next(model.parameters()).device
+
+    @staticmethod
+    def train(engine,mini_batch):
+        engine.model.train()
+        engine.optimizer.zero_grad()
+        
+        x,y = mini_batch
+        x,y = x.to(engine.device),y.to(engine.device)
+
+        y_hat = engine.model(x)
+        
+        loss=engine.crit(y_hat,y)
+        loss.backward()
+
+        if isinstance(y,torch.LongTensor)
+
+```
 
 
